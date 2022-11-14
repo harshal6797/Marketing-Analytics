@@ -1,0 +1,252 @@
+---
+title: "HipHop Lyrics"
+author: "Harshal Suryawanshi"
+date: "`r Sys.Date()`"
+output:
+  rmdformats::downcute:
+    self_contained: true
+    default_style: "dark"
+    downcute_theme: "default"
+---
+
+
+```{r setup, include=FALSE}
+## Global options
+knitr::opts_chunk$set(cache = TRUE)
+```
+
+```{r libraries}
+library(tidyverse)
+library(here)
+library(ggplot2)
+```
+
+
+# The Data
+
+```{r read_data}
+hiphop_data <- read_csv(here("Data", "hiphop.csv"))
+```
+```{r}
+summarise(hiphop_data)
+```
+
+ 
+# Cleaning the dataset
+```{r}
+hiphop_data <- hiphop_data %>%
+  mutate(
+    sex = as.factor(sex),
+    ethnic = as.factor(ethnic))
+
+```
+
+# Unique AAVE words studied in this dataset
+```{r}
+length(unique(hiphop_data[["word"]]))
+```
+ - There are 64 unique AAE words in this dataset
+ 
+# Recategoriging ethnic into only two groups, “white” and “non-white”, to simplify data
+```{r}
+hiphop_data <- hiphop_data %>%
+  mutate(
+   ethnicity = ifelse(ethnic == "white", "white", "non-white")
+  )
+```
+
+# Demographics of the people in this study. Investigating the variables sex, age, and ethnic and summarize our findings
+```{r}
+hiphop_demo <- hiphop_data %>%
+  select(sex, subj, age, ethnic)
+
+hiphop_demo1 <- unique(hiphop_demo)
+summary(hiphop_demo1)
+
+```
+
+ - The demographics of the people in this study shows that there are 117 females and 51 males with maximum age among the participants being 48 while minimum being 16. Participants include people with different ethinicity which include White, Asian, Hispanic, Indian and Birarcial. White people contribute to the maximum percentage of the population.
+
+# Plots to display the demographic information of the subjects in this study
+```{r}
+hiphop_data %>%
+  ggplot(aes(x = age, fill = sex)) + geom_histogram(position = "dodge", alpha=0.8) + labs(x = "Age", y = "Count of males and females") + ggtitle("Count of  Males and Females with respect to their age")
+```
+
+
+```{r}
+hiphop_data %>%
+  ggplot(aes(x= sex, y = age, fill = ethnicity)) + geom_boxplot() + labs(x = "Sex", y = "Age") + ggtitle("Distribution of males and females accross their ethnicity with respect to their age")
+```
+
+
+
+# Determining which word(s) in this study was the most and least familiar on average for each demographic group
+
+## **People below the age of 20** 
+```{r}
+FamiliarWords <- hiphop_data %>%
+  select(word, age, familiarity) %>%
+  filter(age < 20) %>%
+  group_by(word) %>%
+  summarize(mean_familiarity = mean(familiarity))
+```
+
+```{r Most popular word for age less than 20}
+FamiliarWords %>% top_n(1)
+```
+
+```{r Least popular word age less than 20}
+FamiliarWords %>% top_n(-1)
+```
+ - Most popular word for people below age of 20 is **off the hook** and Least popular word for people below age of 20 is **catch the vapors**
+ 
+## Non-white women
+```{r}
+FamiliarWords <- hiphop_data %>%
+  select(word, sex, ethnicity, familiarity) %>%
+  filter(sex == "Female", ethnicity == "non-white") %>%
+  group_by(word) %>%
+  summarize(mean_familiarity = mean(familiarity))
+```
+
+```{r Most popular word for non-white women}
+FamiliarWords %>% top_n(1)
+  
+```
+
+```{r Least popular word for non-white women}
+FamiliarWords %>% top_n(-1)
+```
+ - The most popular word among non-white women is **feel me** and the least popular words among non-white women are **break someone out**, **dukey rope**, **plex**, **rollie**.
+
+## White men above the age of 30
+```{r}
+FamiliarWords <- hiphop_data %>%
+  select(word, sex, age, ethnicity, familiarity) %>%
+  filter(sex == "Male", ethnicity == "white", age > 30) %>%
+  group_by(word) %>%
+  summarize(mean_familiarity = mean(familiarity))
+  FamiliarWords
+```
+
+```{r Most popular word for white men above age 30}
+FamiliarWords %>% top_n(1)
+  
+```
+
+```{r Least popular word for white men above age 30}
+FamiliarWords %>% top_n(-1)
+```
+
+# Determining which music genre most differentiates the groups for each demographic. That is, which genre had much higher average (mean or median) score in one group than the other
+
+## Male versus Female
+```{r}
+hiphop_data1 <- hiphop_data %>%
+  select(intl:unclassifiable, sex) %>%
+  group_by(sex) %>%
+  summarise(across(intl:unclassifiable, list(mean)))
+
+hiphop_data1 <- setNames(data.frame(t(hiphop_data1[ , - 1])), hiphop_data1[ , 1])
+colnames(hiphop_data1) = c("Female", "Male")
+
+hiphop_data1 %>%
+  mutate(Difference = Female - Male) %>%
+  arrange(hiphop_data1)
+```
+ - **Rock** genre has much higher average in male than female
+
+## White versus Non-White
+```{r}
+hiphop_data1 <- hiphop_data %>%
+  select(intl:unclassifiable, ethnicity) %>%
+  group_by(ethnicity) %>%
+  summarise(across(intl:unclassifiable, list(mean)))
+
+hiphop_data1 <- setNames(data.frame(t(hiphop_data1[ , - 1])), hiphop_data1[ , 1])
+colnames(hiphop_data1) = c("non_white", "white")
+
+hiphop_data1 %>%
+  mutate(Difference = non_white - white) %>%
+  arrange(hiphop_data1)
+```
+ - **International Music** has a higher average in non-white people than white people.
+
+## Age below 21 versus age 21+
+```{r}
+hiphop_data1 <- hiphop_data %>%
+  select(intl:unclassifiable, age) %>%
+  mutate(age_group = case_when(age < 21 ~ "below 21", age >= 21 ~ "above 21")) %>%
+  group_by(age_group) %>%
+  summarise(across(intl:unclassifiable, mean))
+
+hiphop_data1 <- setNames(data.frame(t(hiphop_data1[ , - 1])), hiphop_data1[ , 1])
+colnames(hiphop_data1) = c("above 21", "below 21")
+
+hiphop_data1 %>%
+  mutate(Difference =  `above 21` - `below 21`) %>%
+  arrange(hiphop_data1)
+```
+ - **Alternative** has the highest average among people aged above 21 than those having age below 21.
+ 
+ 
+# Finding words which could be used and avoided in a song which will be percieved as authentically hiphop. Lyrics will be recognizeable to those who describe themselves as hiphop fans, but less recognizeable to those who do not consider themselves fans
+```{r}
+A_data <- hiphop_data %>%
+  select(word, hiphop, familiarity)
+
+summary(A_data)
+```
+
+```{r}
+A_data <- A_data %>%
+  mutate(hiphop = ifelse(hiphop > 3, "fans", "non-fans")) %>%
+  group_by(hiphop, word) %>%
+  summarize(mean_familiarity= mean(familiarity))
+
+
+fans<- A_data %>%
+  filter(hiphop == "fans", mean_familiarity >= 3)
+fans
+```
+
+
+
+```{r}
+non_fans <- A_data %>%
+  filter(hiphop == "non-fans", mean_familiarity >= 3)
+non_fans
+```
+
+```{r}
+anti_join(fans, non_fans, by = "word")
+```
+
+ - Considering people that have a hiphop rating of 3 or more to be authentic fans of the genre.
+ - Words which should be using are **5-0**, **ashy**, **finna**, **make it rain**, **what it do**, **What it is?**.
+ - And the words he should avoid are **boo**, **feel me**, **hella**, **off the hook** because these are common between fans and non-fans.
+
+
+# Finding which title among “Hotline Boo” or “Hella Bling” for an album would appeal more to higher population
+
+```{r}
+summary(hiphop_data$county)
+```
+
+```{r}
+Album_Title <- hiphop_data %>%
+  mutate(county = cut(county, breaks = c(0,99905,331582,3053793), labels=c('small', 'medium', 'large'))) %>%
+  select(fam1, word, subj, county) %>%
+  filter(word == c('boo','hella')) %>%
+  group_by(word, county) %>%
+  summarize(population_appeal = sum(fam1)) %>%
+  drop_na()
+
+Album_Title %>%
+  ggplot(aes(x=word, y=population_appeal)) + geom_col(aes(fill=county), position = 'dodge') + labs(x = "Word", y = "Appeal") + ggtitle('Word appeal with respect to population size')
+```
+ - We have considered words boo and hella from the title as hotline and bling are not present in the dataset. As we can interpret from the graph that the word **hella** is most popular in the county with large population. Hence, anyone trying to create an album should go with the name **Hella Bling**
+ 
+
+
