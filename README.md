@@ -166,7 +166,7 @@ non_fans
 anti_join(fans, non_fans, by = "word")
 ```
 
-- Finding which title among “Hotline Boo” or “Hella Bling” for an album would appeal more to higher population
+- Finding which title among “Hotline Boo” or “Hella Bling” for an album would appeal more to larger chunk of population
 ```
 summary(hiphop_data$county)
 ```
